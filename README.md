@@ -48,6 +48,8 @@ Para una demo en la nube (sin servidor propio). En Vercel no hay worker ni disco
    | `COOKIE_SECURE` | `true` |
    | `MAIL_FROM` | `Compras Grupo AG <compras@grupoag.com>` |
 
+   Si conectó Supabase con la integración de Vercel (*Storage → Supabase*), no hace falta crear `DATABASE_URL`/`DIRECT_URL`: el build usa `POSTGRES_PRISMA_URL` y `POSTGRES_URL_NON_POOLING`.
+
 5. *Deploy*. Al terminar, entre a `https://<proyecto>.vercel.app` con `compras@grupoag.local` y la clave de `SEED_PASSWORD`.
 6. En *Settings → Functions* elija la región más cercana a Supabase.
 
