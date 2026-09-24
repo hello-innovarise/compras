@@ -40,7 +40,7 @@ Para una demo en la nube (sin servidor propio). En Vercel no hay worker ni disco
    | Variable | Valor |
    |---|---|
    | `DATABASE_URL` | URL de Supabase puerto 6543 con `?pgbouncer=true&connection_limit=1` |
-   | `DIRECT_URL` | URL de Supabase puerto 5432 |
+   | `DIRECT_URL` | (opcional) URL de Supabase puerto 5432; si falta se deriva de `DATABASE_URL` |
    | `AUTH_SECRET` | texto aleatorio largo (`openssl rand -hex 32`) |
    | `CRON_SECRET` | otro texto aleatorio |
    | `SEED_PASSWORD` | clave inicial de los usuarios demo |

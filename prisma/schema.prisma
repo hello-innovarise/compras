@@ -5,8 +5,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL") // conexión directa para migraciones (en Supabase: puerto 5432)
+  url      = env("DATABASE_URL")
+  // Las migraciones usan una conexión directa: ver scripts/vercel-build.sh (DIRECT_URL opcional)
 }
 
 enum Role {
