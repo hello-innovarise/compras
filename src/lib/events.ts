@@ -24,6 +24,7 @@ export type FullEvent = Prisma.EventGetPayload<{ include: typeof eventInclude }>
 export type FullBid = FullEvent["bids"][number];
 
 export async function loadEvent(id: string): Promise<FullEvent | null> {
+  await closeDueEvents();
   return prisma.event.findUnique({ where: { id }, include: eventInclude });
 }
 
@@ -161,10 +162,16 @@ export async function openNewRound(id: string, invitationIds: string[], deadline
   await audit(actor, "round.opened", "Event", id, { round: n, suppliers: invitationIds.length, note });
 }
 
-/** Tarea programada: cierra eventos vencidos y envía recordatorios. */
-export async function runScheduler(now = new Date()) {
+/** Cierra las licitaciones cuya fecha límite ya pasó. Se llama también al abrir pantallas (entornos sin worker, ej. Vercel). */
+export async function closeDueEvents(now = new Date()): Promise<number> {
   const due = await prisma.event.findMany({ where: { status: "OPEN", deadline: { lte: now } }, select: { id: true } });
   for (const e of due) await closeEvent(e.id, "sistema");
+  return due.length;
+}
+
+/** Tarea programada: cierra eventos vencidos y envía recordatorios. */
+export async function runScheduler(now = new Date()) {
+  const due = { length: await closeDueEvents(now) };
 
   const hours = (process.env.REMINDER_HOURS || "48,4").split(",").map(Number).filter((h) => h > 0);
   const open = await prisma.event.findMany({ where: { status: "OPEN" }, include: eventInclude });

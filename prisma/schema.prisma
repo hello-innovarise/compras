@@ -5,7 +5,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL") // conexión directa para migraciones (en Supabase: puerto 5432)
 }
 
 enum Role {
@@ -504,4 +505,14 @@ model PriceHistory {
   tons         Float?
   date         DateTime
   source       String?
+}
+
+// Adjuntos guardados en la base de datos (STORAGE_DRIVER=db, para Vercel u otros entornos sin disco persistente)
+model StoredFile {
+  id        String   @id @default(cuid())
+  name      String
+  mime      String
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now())
 }

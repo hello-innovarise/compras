@@ -5,6 +5,7 @@ DB=${E2E_DB:-compras_e2e}
 PGURL=${E2E_PG:-postgresql://compras@localhost:5432}
 psql "$PGURL/postgres" -qc "DROP DATABASE IF EXISTS $DB WITH (FORCE)" -qc "CREATE DATABASE $DB"
 export DATABASE_URL="$PGURL/$DB"
+export DIRECT_URL="$DATABASE_URL"
 export UPLOAD_DIR="${UPLOAD_DIR:-./data/e2e-uploads}"
 npx prisma migrate deploy >/dev/null
 npx tsx prisma/seed.ts

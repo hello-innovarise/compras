@@ -26,13 +26,40 @@ docker compose run --rm app npm run db:seed   # primera vez
 - Correo de pruebas: `docker compose --profile dev up -d mailpit` y `SMTP_HOST=mailpit`, bandeja en `:8025`.
 - Respaldos: volúmenes `pgdata` (base de datos) y `uploads` (adjuntos).
 
+## Versión de prueba en Vercel + Supabase
+
+Para una demo en la nube (sin servidor propio). En Vercel no hay worker ni disco: los adjuntos se guardan en PostgreSQL (máx. ~4 MB por archivo, límite de Vercel), las licitaciones vencidas se cierran al abrir cualquier pantalla y los recordatorios salen una vez al día (Vercel Cron del plan gratuito). Sin `SMTP_HOST` los correos solo quedan en la bitácora; los enlaces del portal se copian con **Obtener enlace**.
+
+1. **Supabase** → *New project* (región cercana, ej. `us-east-1`). En *Connect → ORMs → Prisma* copie:
+   - `DATABASE_URL`: *Transaction pooler* (puerto **6543**) terminando en `?pgbouncer=true&connection_limit=1`.
+   - `DIRECT_URL`: *Session pooler* (puerto **5432**).
+2. **GitHub**: fusione el PR en `main` (Vercel publica la rama `main` como producción).
+3. **Vercel** → *Add New → Project* → importe `hello-innovarise/compras` (Framework: Next.js; `vercel.json` ya define el build: migraciones + datos iniciales + build).
+4. En *Environment Variables* agregue:
+
+   | Variable | Valor |
+   |---|---|
+   | `DATABASE_URL` | URL de Supabase puerto 6543 con `?pgbouncer=true&connection_limit=1` |
+   | `DIRECT_URL` | URL de Supabase puerto 5432 |
+   | `AUTH_SECRET` | texto aleatorio largo (`openssl rand -hex 32`) |
+   | `CRON_SECRET` | otro texto aleatorio |
+   | `SEED_PASSWORD` | clave inicial de los usuarios demo |
+   | `STORAGE_DRIVER` | `db` |
+   | `COOKIE_SECURE` | `true` |
+   | `MAIL_FROM` | `Compras Grupo AG <compras@grupoag.com>` |
+
+5. *Deploy*. Al terminar, entre a `https://<proyecto>.vercel.app` con `compras@grupoag.local` y la clave de `SEED_PASSWORD`.
+6. En *Settings → Functions* elija la región más cercana a Supabase.
+
+Para desactivar la demo basta con pausar el proyecto en Vercel; los datos quedan en Supabase.
+
 ## Desarrollo
 
 Requisitos: Node 22, PostgreSQL 16.
 
 ```bash
 npm install
-cp .env.example .env
+cp .env.example .env    # DATABASE_URL y DIRECT_URL
 npx prisma migrate dev
 npm run db:seed
 npm run dev            # http://localhost:3000

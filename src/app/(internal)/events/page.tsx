@@ -2,11 +2,13 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { Badge, Empty } from "@/components/ui";
 import { fmtDate } from "@/lib/i18n";
+import { closeDueEvents } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
 export default async function EventsPage({ searchParams }: { searchParams: Promise<{ status?: string; q?: string }> }) {
   const { status, q } = await searchParams;
+  await closeDueEvents();
   const events = await prisma.event.findMany({
     where: {
       ...(status ? { status: status as never } : {}),

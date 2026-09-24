@@ -2,10 +2,12 @@ import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { Badge, Empty } from "@/components/ui";
 import { fmtDate } from "@/lib/i18n";
+import { closeDueEvents } from "@/lib/events";
 
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
+  await closeDueEvents();
   const [events, sessions, counts] = await Promise.all([
     prisma.event.findMany({ where: { status: { in: ["DRAFT", "OPEN", "CLOSED"] } }, orderBy: { deadline: "asc" }, include: { invitations: true, bids: true, _count: { select: { items: true } } }, take: 20 }),
     prisma.committeeSession.findMany({ where: { status: { not: "APPROVED" } }, orderBy: { date: "asc" }, take: 5 }),

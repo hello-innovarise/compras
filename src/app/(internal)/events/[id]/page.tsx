@@ -6,6 +6,7 @@ import { sectionFields } from "@/lib/templates";
 import { Badge, Empty, Flash, Tabs } from "@/components/ui";
 import { fmtDate } from "@/lib/i18n";
 import { toLocalInput } from "@/lib/forms";
+import { baseUrl } from "@/lib/mail";
 import { fmt, termLabel } from "@/lib/pricing";
 import { EventForm } from "../EventForm";
 import { ItemsEditor } from "./ItemsEditor";
@@ -166,7 +167,7 @@ async function SuppliersTab({ ev, sp }: { ev: NonNullable<Awaited<ReturnType<typ
     <div className="space-y-4">
       {sp.link && (
         <div className="rounded-md bg-blue-50 p-3 text-sm">
-          Enlace del portal (compártalo solo con el proveedor): <code className="select-all break-all">{(process.env.APP_URL || "") + sp.link}</code>
+          Enlace del portal (compártalo solo con el proveedor): <code className="select-all break-all">{baseUrl() + sp.link}</code>
         </div>
       )}
       <div className="card">

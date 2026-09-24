@@ -39,6 +39,12 @@ export async function sendMail(m: MailInput): Promise<boolean> {
   return !error;
 }
 
+export function baseUrl(): string {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL;
+  return vercel ? `https://${vercel}` : "http://localhost:3000";
+}
+
 export function appUrl(p: string) {
-  return `${(process.env.APP_URL || "http://localhost:3000").replace(/\/$/, "")}${p}`;
+  return `${baseUrl()}${p}`;
 }

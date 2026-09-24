@@ -25,6 +25,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://compras:${DB_PASSWORD:-compras}@db:5432/compras
+      DIRECT_URL: postgresql://compras:${DB_PASSWORD:-compras}@db:5432/compras
       UPLOAD_DIR: /data/uploads
     ports:
       - "3000:3000"
@@ -39,6 +40,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgresql://compras:${DB_PASSWORD:-compras}@db:5432/compras
+      DIRECT_URL: postgresql://compras:${DB_PASSWORD:-compras}@db:5432/compras
       UPLOAD_DIR: /data/uploads
     command: ["npx", "tsx", "src/worker/cron.ts"]
     volumes:
