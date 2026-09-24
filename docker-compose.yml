@@ -1,0 +1,57 @@
+# Despliegue en servidor interno de Grupo AG.
+#   docker compose up -d --build
+#   docker compose run --rm app npm run db:seed   (primera vez: usuarios, plantillas y datos demo)
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: compras
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-compras}
+      POSTGRES_DB: compras
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U compras"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://compras:${DB_PASSWORD:-compras}@db:5432/compras
+      UPLOAD_DIR: /data/uploads
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/data/uploads
+
+  worker:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - app
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://compras:${DB_PASSWORD:-compras}@db:5432/compras
+      UPLOAD_DIR: /data/uploads
+    command: ["npx", "tsx", "src/worker/cron.ts"]
+    volumes:
+      - uploads:/data/uploads
+
+  # Solo para pruebas: bandeja de correo local en http://servidor:8025 (SMTP_HOST=mailpit, SMTP_PORT=1025)
+  mailpit:
+    image: axllent/mailpit
+    profiles: ["dev"]
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+volumes:
+  pgdata:
+  uploads:

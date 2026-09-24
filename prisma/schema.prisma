@@ -1,0 +1,507 @@
+// Compras AG – Licitaciones de materia prima y Torre de Compras
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  BUYER
+  COMMITTEE
+}
+
+enum FieldSection {
+  SKU_SPEC
+  OFFER_TECH
+  OFFER_COMPLIANCE
+  OFFER_TERMS
+}
+
+enum FieldType {
+  NUMBER
+  TEXT
+  OKNO
+  SELECT
+  DATE
+}
+
+enum EventStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  AWARDED
+  CANCELLED
+}
+
+enum InvitationStatus {
+  PENDING
+  SENT
+  VIEWED
+  DECLINED
+  SUBMITTED
+}
+
+enum BidStatus {
+  DRAFT
+  SUBMITTED
+}
+
+enum BidSource {
+  WEB
+  EXCEL
+}
+
+enum AwardStatus {
+  DRAFT
+  APPROVED
+}
+
+enum SessionStatus {
+  DRAFT
+  IN_SESSION
+  APPROVED
+}
+
+enum ActionStatus {
+  OPEN
+  DONE
+}
+
+enum IncidentType {
+  CLAIM
+  PENALTY
+}
+
+model Company {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  users  User[]
+  events Event[]
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         Role     @default(BUYER)
+  active       Boolean  @default(true)
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id])
+  createdAt    DateTime @default(now())
+  events       Event[]
+}
+
+model Supplier {
+  id          String               @id @default(cuid())
+  code        String?              @unique // código de proveedor ERP/SAP
+  name        String
+  country     String?
+  locale      String               @default("es")
+  active      Boolean              @default(true)
+  notes       String?
+  createdAt   DateTime             @default(now())
+  contacts    SupplierContact[]
+  invitations Invitation[]
+  evaluations SupplierEvaluation[]
+  incidents   SupplierIncident[]
+}
+
+model SupplierContact {
+  id         String   @id @default(cuid())
+  supplierId String
+  supplier   Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  name       String?
+  email      String
+}
+
+model Template {
+  id              String          @id @default(cuid())
+  name            String          @unique
+  category        String
+  description     String?
+  baseLabel       String          @default("CIF")
+  // [{key,labelEs,labelEn}] – componentes que suman el precio base (ej. FOB+Flete+Seguro = CIF)
+  priceComponents Json
+  // días de crédito ofrecidos como opción de financiamiento, ej. [35,60,90,120]
+  financingTerms  Json
+  containerTons   Float?
+  // documentos que el proveedor debe subir [{key,labelEs,labelEn}]
+  requiredDocs    Json            @default("[]")
+  createdAt       DateTime        @default(now())
+  fields          TemplateField[]
+  events          Event[]
+}
+
+model TemplateField {
+  id         String       @id @default(cuid())
+  templateId String
+  template   Template     @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  key        String
+  labelEs    String
+  labelEn    String
+  section    FieldSection
+  type       FieldType    @default(TEXT)
+  unit       String?
+  required   Boolean      @default(false)
+  options    Json?
+  aliases    Json?        // encabezados alternativos para leer Excel
+  order      Int          @default(0)
+
+  @@unique([templateId, key])
+}
+
+model Event {
+  id            String            @id @default(cuid())
+  code          String            @unique
+  title         String
+  family        String            // ej. Perfiles, HRC, Palanquilla
+  material      String?
+  companyId     String
+  company       Company           @relation(fields: [companyId], references: [id])
+  templateId    String
+  template      Template          @relation(fields: [templateId], references: [id])
+  createdById   String?
+  createdBy     User?             @relation(fields: [createdById], references: [id])
+  status        EventStatus       @default(DRAFT)
+  sealed        Boolean           @default(true)
+  currentRound  Int               @default(1)
+  deadline      DateTime
+  timezone      String            @default("America/Guatemala")
+  committeeDate DateTime?
+  priceValidity DateTime?
+  shipmentDate  DateTime?
+  etaDays       Int?              @default(35)
+  incoterm      String?
+  destination   String?
+  port          String?
+  freeDays      Int?
+  containerTons Float?
+  surveyor      String?
+  conditions    String?           // requisitos, aspectos legales y logísticos
+  introEs       String?
+  introEn       String?
+  createdAt     DateTime          @default(now())
+  publishedAt   DateTime?
+  closedAt      DateTime?
+  items         EventItem[]
+  documents     EventDocument[]
+  rounds        Round[]
+  invitations   Invitation[]
+  bids          Bid[]
+  awards        Award[]
+  matrices      EvaluationMatrix[]
+}
+
+model EventItem {
+  id          String      @id @default(cuid())
+  eventId     String
+  event       Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  vtaCode     String?
+  gCode       String
+  description String
+  quantity    Float
+  specs       Json        @default("{}")
+  order       Int         @default(0)
+  bidLines    BidLine[]
+  awardLines  AwardLine[]
+}
+
+model EventDocument {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  name      String
+  path      String
+  size      Int
+  mime      String
+  createdAt DateTime @default(now())
+}
+
+model Round {
+  id       String    @id @default(cuid())
+  eventId  String
+  event    Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  number   Int
+  deadline DateTime
+  note     String?
+  openedAt DateTime  @default(now())
+  closedAt DateTime?
+
+  @@unique([eventId, number])
+}
+
+model Invitation {
+  id             String           @id @default(cuid())
+  eventId        String
+  event          Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  supplierId     String
+  supplier       Supplier         @relation(fields: [supplierId], references: [id])
+  tokenHash      String           @unique
+  status         InvitationStatus @default(PENDING)
+  maxRound       Int              @default(1)
+  viewedAt       DateTime?
+  declinedReason String?
+  remindersSent  Json             @default("[]")
+  createdAt      DateTime         @default(now())
+  bids           Bid[]
+
+  @@unique([eventId, supplierId])
+}
+
+model Bid {
+  id           String        @id @default(cuid())
+  eventId      String
+  event        Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  invitationId String
+  invitation   Invitation    @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  round        Int
+  version      Int           @default(0)
+  status       BidStatus     @default(DRAFT)
+  source       BidSource     @default(WEB)
+  paymentTerms String?
+  origin       String?
+  incoterm     String?
+  validity     String?
+  comments     String?
+  submittedAt  DateTime?
+  updatedAt    DateTime      @updatedAt
+  lines        BidLine[]
+  documents    BidDocument[]
+
+  @@unique([invitationId, round])
+}
+
+model BidLine {
+  id         String      @id @default(cuid())
+  bidId      String
+  bid        Bid         @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  itemId     String
+  item       EventItem   @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  noOffer    Boolean     @default(false)
+  offeredQty Float?
+  prices     Json        @default("{}") // {fob, freight, insurance}
+  financing  Json        @default("{}") // {"35": 5, "60": 15}
+  values     Json        @default("{}") // campos técnicos/cumplimiento/términos
+  awardLines AwardLine[]
+
+  @@unique([bidId, itemId])
+}
+
+model BidDocument {
+  id        String   @id @default(cuid())
+  bidId     String
+  bid       Bid      @relation(fields: [bidId], references: [id], onDelete: Cascade)
+  kind      String
+  name      String
+  path      String
+  size      Int
+  mime      String
+  createdAt DateTime @default(now())
+}
+
+model Award {
+  id           String      @id @default(cuid())
+  eventId      String
+  event        Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  status       AwardStatus @default(DRAFT)
+  notes        String?
+  scenarioId   String?
+  approvedBy   String?
+  approvedAt   DateTime?
+  notifiedAt   DateTime?
+  createdAt    DateTime    @default(now())
+  lines        AwardLine[]
+}
+
+model AwardLine {
+  id         String    @id @default(cuid())
+  awardId    String
+  award      Award     @relation(fields: [awardId], references: [id], onDelete: Cascade)
+  itemId     String
+  item       EventItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  bidLineId  String?
+  bidLine    BidLine?  @relation(fields: [bidLineId], references: [id], onDelete: SetNull)
+  supplierId String
+  tons       Float
+  termDays   Int       @default(0)
+  unitPrice  Float
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actor     String
+  action    String
+  entity    String
+  entityId  String?
+  data      Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+}
+
+model EmailLog {
+  id        String   @id @default(cuid())
+  to        String
+  subject   String
+  kind      String
+  eventId   String?
+  error     String?
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  key   String @id
+  value Json
+}
+
+// ---------- Evaluación de proveedores (N.E.P) ----------
+model SupplierEvaluation {
+  id             String   @id @default(cuid())
+  supplierId     String
+  supplier       Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  year           Int
+  semester       Int
+  score          Float
+  sustainability Boolean?
+  importedAt     DateTime @default(now())
+
+  @@unique([supplierId, year, semester])
+}
+
+model SupplierIncident {
+  id          String       @id @default(cuid())
+  supplierId  String
+  supplier    Supplier     @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+  type        IncidentType
+  impact      String       // LOW | HIGH | MEDIUM | BLOCKED
+  date        DateTime
+  description String?
+  amount      Float?
+  open        Boolean      @default(true)
+}
+
+// ---------- Matriz de evaluación y Torre de Compras ----------
+model CommitteeSession {
+  id        String             @id @default(cuid())
+  name      String
+  date      DateTime
+  status    SessionStatus      @default(DRAFT)
+  notes     String?
+  createdAt DateTime           @default(now())
+  matrices  EvaluationMatrix[]
+}
+
+model EvaluationMatrix {
+  id           String             @id @default(cuid())
+  name         String             // ej. "HRC TYPSA"
+  family       String             // ej. "HRC HN"
+  group        String             @default("Largos") // Largos | Planos
+  purchaseType String?            // Barco exclusivo | Compra extraordinaria
+  eventId      String?
+  event        Event?             @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  sessionId    String?
+  session      CommitteeSession?  @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  negotiator   String?
+  date         DateTime           @default(now())
+  params       Json               // ReferenceParams
+  weights      Json               // EvaluationWeights
+  prevPrice    Float?
+  prevExtra    Float?
+  spreadGoal   Float?
+  createdAt    DateTime           @default(now())
+  options      EvaluationOption[]
+  scenarios    Scenario[]
+  actions      ActionItem[]
+}
+
+model EvaluationOption {
+  id                String           @id @default(cuid())
+  matrixId          String
+  matrix            EvaluationMatrix @relation(fields: [matrixId], references: [id], onDelete: Cascade)
+  supplierId        String?
+  supplierName      String
+  mill              String?
+  currency          String           @default("USD")
+  fob               Float?
+  freight           Float?
+  insurance         Float?
+  cif               Float?           // precio CIF contado
+  creditSurcharge   Float            @default(0)
+  priceWithCredit   Float?           // si solo se conoce el precio con crédito
+  tons              Float
+  creditDays        Int              @default(0)
+  advanceConditions String?
+  claimsAmount      Float            @default(0)
+  merma             Float            @default(0)
+  internacionExtra  Float            @default(0)
+  incoterm          String?
+  shipmentDate      DateTime?
+  origin            String?
+  legalRisk         String           @default("4")
+  alliance          String           @default("3")
+  penalty           String           @default("1")
+  specs             String           @default("4")
+  claims            String           @default("1")
+  supplierScore     Float?           // override de nota N.E.P
+  gaps              String?
+  order             Int              @default(0)
+}
+
+model Scenario {
+  id        String           @id @default(cuid())
+  matrixId  String
+  matrix    EvaluationMatrix @relation(fields: [matrixId], references: [id], onDelete: Cascade)
+  name      String
+  isBase    Boolean          @default(false)
+  approved  Boolean          @default(false)
+  auto      Boolean          @default(false)
+  notes     String?
+  order     Int              @default(0)
+  createdAt DateTime         @default(now())
+  lines     ScenarioLine[]
+}
+
+model ScenarioLine {
+  id          String   @id @default(cuid())
+  scenarioId  String
+  scenario    Scenario @relation(fields: [scenarioId], references: [id], onDelete: Cascade)
+  optionId    String?  // opción de evaluación (proveedor × plazo)
+  supplierId  String?
+  supplierName String
+  termDays    Int      @default(0)
+  itemId      String?  // SKU si la matriz viene de una licitación
+  itemLabel   String?
+  tons        Float
+  unitPrice   Float
+  priceAdjust Float    @default(0)
+  note        String?
+}
+
+model ActionItem {
+  id        String           @id @default(cuid())
+  matrixId  String
+  matrix    EvaluationMatrix @relation(fields: [matrixId], references: [id], onDelete: Cascade)
+  text      String
+  owner     String?
+  dueDate   DateTime?
+  status    ActionStatus     @default(OPEN)
+  createdAt DateTime         @default(now())
+}
+
+model PriceHistory {
+  id           String   @id @default(cuid())
+  family       String
+  itemCode     String?
+  supplierName String?
+  price        Float
+  extra        Float?
+  tons         Float?
+  date         DateTime
+  source       String?
+}
