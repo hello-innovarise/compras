@@ -28,32 +28,15 @@ docker compose run --rm app npm run db:seed   # primera vez
 
 ## Versión de prueba en Vercel + Supabase
 
-Para una demo en la nube (sin servidor propio). En Vercel no hay worker ni disco: los adjuntos se guardan en PostgreSQL (máx. ~4 MB por archivo, límite de Vercel), las licitaciones vencidas se cierran al abrir cualquier pantalla y los recordatorios salen una vez al día (Vercel Cron del plan gratuito). Sin `SMTP_HOST` los correos solo quedan en la bitácora; los enlaces del portal se copian con **Obtener enlace**.
+Para una demo en la nube. La única configuración es conectar la base de datos:
 
-1. **Supabase** → *New project* (región cercana, ej. `us-east-1`). En *Connect → ORMs → Prisma* copie:
-   - `DATABASE_URL`: *Transaction pooler* (puerto **6543**) terminando en `?pgbouncer=true&connection_limit=1`.
-   - `DIRECT_URL`: *Session pooler* (puerto **5432**).
-2. **GitHub**: fusione el PR en `main` (Vercel publica la rama `main` como producción).
-3. **Vercel** → *Add New → Project* → importe `hello-innovarise/compras` (Framework: Next.js; `vercel.json` ya define el build: migraciones + datos iniciales + build).
-4. En *Environment Variables* agregue:
+1. En Vercel, abra el proyecto → pestaña **Storage** → **Create Database** (o *Connect Store*) → **Supabase** → cree la base gratuita y conéctela a **todos los entornos** (Production, Preview, Development). Vercel crea solo las variables `POSTGRES_PRISMA_URL` y `POSTGRES_URL_NON_POOLING`.
+2. Pestaña **Deployments** → último deploy → **⋯ → Redeploy**. El build aplica migraciones, carga datos iniciales y compila.
+3. Entre con `compras@grupoag.local` / `cambiar123` (o la clave de `SEED_PASSWORD`).
 
-   | Variable | Valor |
-   |---|---|
-   | `DATABASE_URL` | URL de Supabase puerto 6543 con `?pgbouncer=true&connection_limit=1` |
-   | `DIRECT_URL` | (opcional) URL de Supabase puerto 5432; si falta se deriva de `DATABASE_URL` |
-   | `AUTH_SECRET` | texto aleatorio largo (`openssl rand -hex 32`) |
-   | `CRON_SECRET` | otro texto aleatorio |
-   | `SEED_PASSWORD` | clave inicial de los usuarios demo |
-   | `STORAGE_DRIVER` | `db` |
-   | `COOKIE_SECURE` | `true` |
-   | `MAIL_FROM` | `Compras Grupo AG <compras@grupoag.com>` |
+Todo lo demás es automático en Vercel: adjuntos en PostgreSQL (máx. ~4 MB por archivo), clave de sesión derivada si no hay `AUTH_SECRET`, cookies seguras, cierre de licitaciones vencidas al abrir pantallas y recordatorios diarios (Vercel Cron). Sin `SMTP_HOST` los correos solo quedan en la bitácora; los enlaces del portal se copian con **Obtener enlace**.
 
-   Si conectó Supabase con la integración de Vercel (*Storage → Supabase*), no hace falta crear `DATABASE_URL`/`DIRECT_URL`: el build usa `POSTGRES_PRISMA_URL` y `POSTGRES_URL_NON_POOLING`.
-
-5. *Deploy*. Al terminar, entre a `https://<proyecto>.vercel.app` con `compras@grupoag.local` y la clave de `SEED_PASSWORD`.
-6. En *Settings → Functions* elija la región más cercana a Supabase.
-
-Para desactivar la demo basta con pausar el proyecto en Vercel; los datos quedan en Supabase.
+Opcional: `AUTH_SECRET`, `SEED_PASSWORD`, `CRON_SECRET`, `SMTP_*`. Si prefiere un proyecto Supabase creado aparte, defina `DATABASE_URL` (pooler, puerto 6543, con `?pgbouncer=true&connection_limit=1`) y opcionalmente `DIRECT_URL` (puerto 5432), marcados para Production y Preview.
 
 ## Desarrollo
 

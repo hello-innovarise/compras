@@ -5,9 +5,9 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import bcrypt from "bcryptjs";
 import { prisma } from "./db";
+import { authSecret, secureCookies } from "./secret";
 
 const COOKIE = "compras_session";
-const secret = () => new TextEncoder().encode(process.env.AUTH_SECRET || "dev-secret-change-me");
 
 export interface SessionUser {
   id: string;
@@ -17,13 +17,13 @@ export interface SessionUser {
 }
 
 export async function signSession(u: SessionUser): Promise<string> {
-  return new SignJWT({ ...u }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("12h").sign(secret());
+  return new SignJWT({ ...u }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("12h").sign(await authSecret());
 }
 
 export async function verifySession(token?: string): Promise<SessionUser | null> {
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, secret());
+    const { payload } = await jwtVerify(token, await authSecret());
     return { id: String(payload.id), email: String(payload.email), name: String(payload.name), role: payload.role as SessionUser["role"] };
   } catch {
     return null;
@@ -48,7 +48,7 @@ export async function login(email: string, password: string): Promise<SessionUse
   if (!(await bcrypt.compare(password, user.passwordHash))) return null;
   const s: SessionUser = { id: user.id, email: user.email, name: user.name, role: user.role };
   const c = await cookies();
-  c.set(COOKIE, await signSession(s), { httpOnly: true, sameSite: "lax", secure: process.env.COOKIE_SECURE === "true", path: "/", maxAge: 60 * 60 * 12 });
+  c.set(COOKIE, await signSession(s), { httpOnly: true, sameSite: "lax", secure: secureCookies(), path: "/", maxAge: 60 * 60 * 12 });
   return s;
 }
 
