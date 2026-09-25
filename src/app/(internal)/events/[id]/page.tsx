@@ -53,6 +53,11 @@ export default async function EventPage({ params, searchParams }: { params: Prom
         </div>
         <div className="flex flex-wrap gap-2">
           {draft && <form action={A.publish.bind(null, id)}><button className="btn">Publicar y enviar invitaciones</button></form>}
+          {(draft || ev.status === "OPEN") && (
+            <form action={A.simulateOffers.bind(null, id)} title="Solo para demostración: genera ofertas de los proveedores invitados">
+              <button className="btn-secondary border-dashed border-amber-400 text-amber-800">🧪 Simular ofertas de prueba</button>
+            </form>
+          )}
           {ev.status === "OPEN" && <form action={A.closeNow.bind(null, id)}><button className="btn-secondary">Cerrar ahora</button></form>}
           {(ev.status === "OPEN" || ev.status === "CLOSED") && (
             <form action={A.extendDeadline.bind(null, id)} className="flex gap-1">

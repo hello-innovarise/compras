@@ -10,6 +10,7 @@ import { closeEvent, loadEvent, openNewRound, publishEvent, sendInvitation, temp
 import { parseItemsWorkbook } from "@/lib/excel/parse";
 import { saveFile, removeFile } from "@/lib/storage";
 import { hashToken, newToken } from "@/lib/tokens";
+import { simulateBids } from "@/lib/demo";
 
 function eventData(fd: FormData) {
   const tz = str(fd, "timezone") ?? "America/Guatemala";
@@ -253,4 +254,17 @@ export async function cancelEvent(id: string) {
   await prisma.event.update({ where: { id }, data: { status: "CANCELLED" } });
   await audit(u.email, "event.cancelled", "Event", id);
   back(`/events/${id}`, "Licitación cancelada");
+}
+
+export async function simulateOffers(id: string) {
+  const u = await requireUser(["BUYER"]);
+  let n = 0;
+  try {
+    const ev = await prisma.event.findUniqueOrThrow({ where: { id } });
+    if (ev.status === "DRAFT") await publishEvent(id, u.email);
+    n = await simulateBids(id, u.email);
+  } catch (e) {
+    back(`/events/${id}`, undefined, errMsg(e));
+  }
+  back(`/events/${id}?tab=suppliers`, n ? `${n} ofertas simuladas recibidas. Use "Cerrar ahora" para ver el comparativo.` : "Todos los proveedores ya ofertaron en esta ronda.");
 }
