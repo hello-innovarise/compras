@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #1f3864;
+  --color-brand-600: #2b4c85;
+  --color-supplier: #e2f0d9;
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center gap-1 rounded-md border border-transparent bg-brand px-3 py-1.5 text-sm font-medium text-white hover:bg-brand-600 disabled:opacity-50 cursor-pointer; }
+  .btn-secondary { @apply inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-800 hover:bg-gray-50 cursor-pointer; }
+  .btn-danger { @apply inline-flex items-center gap-1 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700 cursor-pointer; }
+  .btn-sm { @apply px-2 py-1 text-xs; }
+  .input { @apply w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-sm focus:border-brand focus:outline-none focus:ring-1 focus:ring-brand; }
+  .input-cell { @apply w-full min-w-16 rounded border border-gray-300 bg-supplier px-1 py-0.5 text-right text-xs focus:border-brand focus:outline-none; }
+  .label { @apply mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-600; }
+  .card { @apply rounded-lg border border-gray-200 bg-white p-4 shadow-sm; }
+  .h1 { @apply text-2xl font-bold text-brand; }
+  .h2 { @apply text-lg font-semibold text-gray-800; }
+  .tbl { @apply w-full border-collapse text-xs; }
+  .tbl th { @apply border border-gray-200 bg-gray-100 px-2 py-1 text-left font-semibold text-gray-700 align-bottom; }
+  .tbl td { @apply border border-gray-200 px-2 py-1 align-top; }
+  .num { @apply text-right tabular-nums whitespace-nowrap; }
+  .badge { @apply inline-block rounded-full px-2 py-0.5 text-xs font-medium; }
+  .tab { @apply rounded-t-md border-b-2 border-transparent px-3 py-2 text-sm font-medium text-gray-600 hover:text-brand; }
+  .tab-active { @apply border-brand text-brand; }
+}
+
+body { @apply bg-gray-50 text-gray-900; }
+@media print {
+  .no-print { display: none !important; }
+  body { background: white; }
+}

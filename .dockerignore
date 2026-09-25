@@ -1,0 +1,8 @@
+node_modules
+.next
+.env
+data
+tests/fixtures/*.xlsx
+test-results
+playwright-report
+.git
